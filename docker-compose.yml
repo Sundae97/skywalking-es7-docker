@@ -1,0 +1,52 @@
+version: '3.3'
+services: 
+    elasticsearch7: 
+        image: elasticsearch:7.8.1
+        container_name: es
+        restart: always
+        ports: 
+            - 9200:9200
+            - 9300:9300
+        environment: 
+            - discovery.type=single-node
+        volumes: 
+            - ./es/data:/usr/share/elasticsearch/data
+            - ./es/logs:/usr/share/elasticsearch/logs
+
+    kibana:
+        image: kibana:7.8.1
+        container_name: kibana
+        restart: always
+        ports: 
+            - 5601:5601
+        links: 
+            - elasticsearch7:elasticsearch
+    
+    oap: 
+        image: apache/skywalking-oap-server:8.1.0-es7
+        container_name: sw-oap
+        restart: always
+        depends_on: 
+            - "elasticsearch7"
+        links: 
+            - elasticsearch7:elasticsearch
+        ports: 
+            - 11800:11800
+            - 12800:12800
+        environment: 
+            - SW_STORAGE=elasticsearch7
+            - SW_STORAGE_ES_CLUSTER_NODES=elasticsearch:9200
+
+    oap-ui:
+        image: apache/skywalking-ui:8.1.0
+        container_name: sw-ui
+        restart: always
+        depends_on: 
+            - "oap"
+        links: 
+            - oap:oap
+        ports: 
+            - 8900:8080
+        environment: 
+            - SW_OAP_ADDRESS=oap:12800
+        
